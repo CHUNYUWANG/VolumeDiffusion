@@ -20,6 +20,8 @@ def get_rays(poses, intrinsics, H, W, N=-1, patch=False):
     fx, fy, cx, cy = intrinsics
 
     i, j = torch.meshgrid(torch.linspace(0, W - 1, W, device=device), torch.linspace(0, H - 1, H, device=device), indexing='ij') # 
+
+    # +0.5 means moving the point to pixel center
     i = i.t().reshape([1, H * W]).expand([B, H * W]) + 0.5
     j = j.t().reshape([1, H * W]).expand([B, H * W]) + 0.5
 
@@ -64,12 +66,18 @@ def get_rays(poses, intrinsics, H, W, N=-1, patch=False):
     else:
         inds = torch.arange(H * W, device=device).expand([B, H * W])
 
+    # to compute directions; can use any depth on the ray
     zs = torch.ones_like(i)
+
+    # cx = xs * fx / zs + cx
     xs = (i - cx) / fx * zs
     ys = (j - cy) / fy * zs
     directions = torch.stack((xs, ys, zs), dim=-1)
     directions = directions / torch.norm(directions, dim=-1, keepdim=True)
+
+    # from camera to world
     rays_d = directions @ poses[:, :3, :3].transpose(-1, -2)
+    
     rays_o = poses[..., :3, 3]
     rays_o = rays_o[..., None, :].expand_as(rays_d)
     results['rays_o'] = rays_o
