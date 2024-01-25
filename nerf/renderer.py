@@ -40,6 +40,7 @@ def sample_pdf(bins, weights, n_samples, det=False):
 
 @torch.cuda.amp.autocast(enabled=False)
 def near_far_from_bound(rays_o, rays_d, bound, type='cube', min_near=0.05):
+
     # rays: [B, N, 3], [B, N, 3]
     # bound: int, radius for ball or half-edge-length for cube
     # return near [B, N, 1], far [B, N, 1]
@@ -51,6 +52,8 @@ def near_far_from_bound(rays_o, rays_d, bound, type='cube', min_near=0.05):
         far = radius + bound
 
     elif type == 'cube':
+        # https://en.wikipedia.org/wiki/Slab_method
+        
         tmin = (-bound - rays_o) / (rays_d + 1e-15) # [B, N, 3]
         tmax = (bound - rays_o) / (rays_d + 1e-15)
         near = torch.where(tmin < tmax, tmin, tmax).max(dim=-1, keepdim=True)[0]
